@@ -12,6 +12,7 @@
 #include "threads/malloc.h"
 #include "lib/kernel/list.h"
 #include "process.h"
+#include "pagedir.h"
 
 static void syscall_handler (struct intr_frame *);
 
@@ -36,7 +37,7 @@ syscall_handler (struct intr_frame *f UNUSED)
 
   switch(sys_call){
     case SYS_HALT:
-      power_off();
+      shutdown_power_off();
       break;
     
     case SYS_EXIT:
