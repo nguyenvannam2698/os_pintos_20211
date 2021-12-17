@@ -13,7 +13,6 @@
 #include "lib/kernel/list.h"
 #include "process.h"
 #include "pagedir.h"
-// theem cais moi ne
 
 static void syscall_handler (struct intr_frame *);
 
