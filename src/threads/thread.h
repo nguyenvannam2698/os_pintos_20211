@@ -4,7 +4,9 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
-#include <threads/synch.h>
+#include "synch.h"
+#include "fixed_point.h"
+#include "userprog/syscall.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -24,19 +26,6 @@ typedef int tid_t;
 #define PRI_MIN 0                       /* Lowest priority. */
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
-
-#define F (1<<14)
-#define TOFIXED(n) (n*F)
-#define TOINTZERO(x) (x/F)
-#define TOINTNEAREST(x) ((x>=0)? ((x+F/2)/F): ((x-F/2)/F))
-#define ADD(x,y) (x+y)
-#define SUB(x,y) (x-y)
-#define ADDXN(x,n) (x+n*F)
-#define SUBXN(x,n) (x-n*F)
-#define MULTXY(x,y) (((int64_t) x)*y/F)
-#define MULTXN(x,n) (x*n)
-#define DIVXY(x,y) (((int64_t) x)*F/y)
-#define DIVXN(x,n) (x/n)
 
 /* A kernel thread or user process.
 
@@ -94,15 +83,6 @@ typedef int tid_t;
    only because they are mutually exclusive: only a thread in the
    ready state is on the run queue, whereas only a thread in the
    blocked state is on a semaphore wait list. */
-
-struct child{
-  tid_t tid;                            /* Just tid */
-  int exit_status;                      /* Exit status of the child. Used by parent */
-  bool load_success;                    /* True if loaded successfully */
-  bool waited_by_parent;                /* Useful to wake up waiting parent */
-  struct list_elem child_elem;
-};
-
 struct thread
   {
     /* Owned by thread.c. */
@@ -111,42 +91,46 @@ struct thread
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
-    
-    int64_t timeToWake;                 /* Time to wake if put to sleep (for timer.c); Absolute */
-    int base_priority;                  /* Base priority of thread */
-    int nice;                           /* Thread's nice value */
-    int recent_cpu;                     /* Thread's recent CPU */
-    struct list_elem all_elem;          /* Thread's presence in all_threads */
-    struct list_elem donor_elem;        /* List element to be in some other thread's list of donators */
-    struct list donators;               /* List of all donors to this thread */
-    struct lock *locked_by;             /* Pointer to lock which this thread is waiting to be released */
-    struct list_elem waiter;            /* To be in waiters list of some sema */
+    struct list_elem allelem;           /* List element for all threads list. */
 
-    // Code add for project 2
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
-    struct list child_processes;        /* List of child processes of the process (struct child) */
-    struct thread *parent;              /* Parent process of the thread/process */
-    struct semaphore child_lock;        /* process_wait returns when this lock is released by child */
-    struct semaphore child_load_lock;   /* Parent waits for info about child load success. If false, exec returns -1 */
-    int num_open_files;                 /* How many opened files process is holding. Used to assign fd to file */
-    struct list open_files;             /* List of struct file_wrappers (file and its fd) */
-    int curr_open_fd;                   /* If current process opens its exec file, this field holds its fd */
-    int parent_open_fd;                 /* If current process opens parent's exec file, this field holds its fd*/
 
-  #ifdef USERPROG
-      /* Owned by userprog/process.c. */
-      uint32_t *pagedir;                  /* Page directory. */
-  #endif
+   int64_t sleep_ticks;
+
+
+#ifdef USERPROG
+    /* Owned by userprog/process.c. */
+    uint32_t *pagedir;                  /* Page directory. */
+#endif
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
+
+   // for prioriry
+    int base_priority;                  /* Base priority. */
+    struct list locks;                  /* Locks that the thread is holding. */
+    struct lock *lock_waiting; 
+    int nice;                           /* Niceness. */
+    fixed_t recent_cpu;          /* The lock that the thread is waiting for. */
+
+    // for sys calls
+    struct list file_list;      // list of files
+    int fd;                     // file descriptor
+    
+    struct list child_list;     // list of child processes
+    tid_t parent;               // id of the parent
+    
+    struct child_process* cp;   // point to child process
+    struct file* executable;    // use for denying writes to executables
+    struct list lock_list;      // use to keep track of locks the thread holds
   };
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
 extern bool thread_mlfqs;
+
 void thread_init (void);
 void thread_start (void);
 
@@ -166,6 +150,10 @@ const char *thread_name (void);
 void thread_exit (void) NO_RETURN;
 void thread_yield (void);
 
+/* Performs some operation on thread t, given auxiliary data AUX. */
+typedef void thread_action_func (struct thread *t, void *aux);
+void thread_foreach (thread_action_func *, void *);
+
 int thread_get_priority (void);
 void thread_set_priority (int);
 
@@ -174,8 +162,17 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
+bool thread_cmp_priority (const struct list_elem *, const struct list_elem *, void *);
+void thread_hold_the_lock (struct lock *);
+void thread_remove_lock (struct lock *);
+void thread_donate_priority (struct thread *);
+void thread_update_priority (struct thread *);
+void thread_mlfqs_increase_recent_cpu_by_one (void);
+void thread_mlfqs_update_priority (struct thread *);
+void thread_mlfqs_update_load_avg_and_recent_cpu (void);
 
-bool is_idle_thread(struct thread *t);
-bool comparePriorities(const struct list_elem *t1, const struct list_elem *t2, void *aux);
-
+// Thêm cho phần userprog
+int is_thread_alive (int pid);
+struct child_process* add_child_process (int pid);
+void thread_release_locks(void);
 #endif /* threads/thread.h */
