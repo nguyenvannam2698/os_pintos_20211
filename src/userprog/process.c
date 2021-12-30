@@ -17,6 +17,8 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "threads/malloc.h"
+#include "userprog/syscall.h"
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp, char **saveptr);
@@ -25,28 +27,27 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp, char **s
    FILENAME.  The new thread may be scheduled (and may even exit)
    before process_execute() returns.  Returns the new process's
    thread id, or TID_ERROR if the thread cannot be created. */
+
 tid_t
-process_execute (const char *file_name) 
+process_execute (const char * file_name) 
 {
   char *fn_copy;
   tid_t tid;
-
-  /* Make a copy of FILE_NAME.
-     Otherwise there's a race between the caller and load(). */
-  fn_copy = palloc_get_page (0);
-  if (fn_copy == NULL) {
+  
+  fn_copy = palloc_get_page(0);
+  if (fn_copy == NULL){
     return TID_ERROR;
   }
+  
   strlcpy (fn_copy, file_name, PGSIZE);
   char *saveptr;
   file_name = strtok_r((char*)file_name, " ", &saveptr );
   
-  /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
+  
   if (tid == TID_ERROR){
     palloc_free_page (fn_copy); 
   }
-  
   return tid;
 }
 
@@ -100,7 +101,7 @@ start_process (void *file_name_)
    immediately, without waiting.
 
    This function will be implemented in problem 2-2.  For now, it
-   does nothing. */
+   does nothing. */   
 int
 process_wait (tid_t child_tid UNUSED) 
 {
@@ -130,7 +131,7 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
-
+  
   lock_acquire(&file_system_lock);
   process_close_file(CLOSE_ALL_FD);
   /* check if current thread is an executable if so we will close it */
@@ -148,7 +149,7 @@ process_exit (void)
     cur->cp->exit = 1;
     sema_up(&cur->cp->exit_sema);
   }
-
+  
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;
@@ -561,6 +562,7 @@ setup_stack (void **esp, char **saveptr, const char *filename)
   // hex_dump((int)*esp+byte_size, *esp, byte_size, 1);
   return success;
 }
+
 
 /* Adds a mapping from user virtual address UPAGE to kernel
    virtual address KPAGE to the page table.

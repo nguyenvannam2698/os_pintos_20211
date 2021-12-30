@@ -62,22 +62,22 @@ syscall_handler (struct intr_frame *f UNUSED)
     lock_init(&file_system_lock);
     FILE_LOCK_INIT = true;
   }
-
+  
   int arg[MAX_ARGS];
   int esp = getpage_ptr((const void *) f->esp);
-
+  
   switch (* (int *) esp)
   {
     case SYS_HALT:
       syscall_halt();
       break;
-
+      
     case SYS_EXIT:
       // fill arg with the amount of arguments needed
       get_args(f, &arg[0], 1);
       syscall_exit(arg[0]);
       break;
-
+      
     case SYS_EXEC:
       // fill arg with the amount of arguments needed
       get_args(f, &arg[0], 1);
@@ -90,13 +90,13 @@ syscall_handler (struct intr_frame *f UNUSED)
       /* syscall_exec(const char* cmdline) */
       f->eax = syscall_exec((const char*)arg[0]); // execute the command line
       break;
-
+      
     case SYS_WAIT:
       // fill arg with the amount of arguments needed
       get_args(f, &arg[0], 1);
       f->eax = syscall_wait(arg[0]);
       break;
-
+      
     case SYS_CREATE:
       // fill arg with the amount of arguments needed
       get_args(f, &arg[0], 2);
@@ -110,7 +110,7 @@ syscall_handler (struct intr_frame *f UNUSED)
       /* syscall_create(const char* file_name, unsigned starting_size) */
       f->eax = syscall_create((const char *)arg[0], (unsigned)arg[1]);  // create this file
       break;
-
+      
     case SYS_REMOVE:
       // fill arg with the amount of arguments needed
       get_args(f, &arg[0], 1);
@@ -124,7 +124,7 @@ syscall_handler (struct intr_frame *f UNUSED)
       /* syscall_remove(const char* file_name) */
       f->eax = syscall_remove((const char *)arg[0]);  // remove this file
       break;
-
+      
     case SYS_OPEN:
       // fill arg with amount of arguments needed
       get_args(f, &arg[0], 1);
@@ -165,7 +165,7 @@ syscall_handler (struct intr_frame *f UNUSED)
       /* syscall_write (int filedes, const void * buffer, unsigned bytes)*/
       f->eax = syscall_read(arg[0], (void *) arg[1], (unsigned) arg[2]);
       break;
-
+      
     case SYS_WRITE:
       
       // fill arg with the amount of arguments needed
@@ -183,14 +183,14 @@ syscall_handler (struct intr_frame *f UNUSED)
       /* syscall_write (int filedes, const void * buffer, unsigned bytes)*/
       f->eax = syscall_write(arg[0], (const void *) arg[1], (unsigned) arg[2]);
       break;
-
+      
     case SYS_SEEK:
       // fill arg with the amount of arguments needed
       get_args(f, &arg[0], 2);
       /* syscall_seek(int filedes, unsigned new_position) */
       syscall_seek(arg[0], (unsigned)arg[1]);
       break;
-    
+      
     case SYS_TELL:
       // fill arg with the amount of arguments needed
       get_args(f, &arg[0], 1);
@@ -204,15 +204,13 @@ syscall_handler (struct intr_frame *f UNUSED)
       /* syscall_close(int filedes) */
       syscall_close(arg[0]);
       break;
-    
+      
     default:
       break;
   }
 }
 
-
-/*=============== Các hàm cần cài đặt ===============*/
-
+/* ============== Các hàm cần cài đặt ============== */
 /* halt */
 void
 syscall_halt (void)
@@ -363,7 +361,6 @@ syscall_read(int filedes, void *buffer, unsigned length)
   return bytes_read;
 }
 
-
 /* syscall_write */
 int 
 syscall_write (int filedes, const void * buffer, unsigned byte_size)
@@ -431,7 +428,7 @@ syscall_close(int filedes)
   lock_release(&file_system_lock);
 }
 
-/*===================================================*/
+/* ================================================= */
 
 /* get arguments from stack */
 void
@@ -446,6 +443,7 @@ get_args (struct intr_frame *f, int *args, int num_of_args)
     args[i] = *ptr;
   }
 }
+
 
 /* function to check if pointer is valid */
 void
@@ -488,23 +486,6 @@ getpage_ptr(const void *vaddr)
     syscall_exit(ERROR);
   }
   return (int)ptr;
-}
-
-/* add file to file list and return file descriptor of added file*/
-int
-add_file (struct file *file_name)
-{
-  struct process_file *process_file_ptr = malloc(sizeof(struct process_file));
-  if (!process_file_ptr)
-  {
-    return ERROR;
-  }
-  process_file_ptr->file = file_name;
-  process_file_ptr->fd = thread_current()->fd;
-  thread_current()->fd++;
-  list_push_back(&thread_current()->file_list, &process_file_ptr->elem);
-  return process_file_ptr->fd;
-  
 }
 
 /* find a child process based on pid */
@@ -550,6 +531,23 @@ void remove_all_child_processes (void)
   }
 }
 
+/* add file to file list and return file descriptor of added file*/
+int
+add_file (struct file *file_name)
+{
+  struct process_file *process_file_ptr = malloc(sizeof(struct process_file));
+  if (!process_file_ptr)
+  {
+    return ERROR;
+  }
+  process_file_ptr->file = file_name;
+  process_file_ptr->fd = thread_current()->fd;
+  thread_current()->fd++;
+  list_push_back(&thread_current()->file_list, &process_file_ptr->elem);
+  return process_file_ptr->fd;
+  
+}
+
 /* get file that matches file descriptor */
 struct file*
 get_file (int filedes)
@@ -569,6 +567,7 @@ get_file (int filedes)
   }
   return NULL; // nothing found
 }
+
 
 /* close the desired file descriptor */
 void

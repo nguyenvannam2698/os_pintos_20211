@@ -34,7 +34,6 @@ struct lock file_system_lock;
 int getpage_ptr (const void *vaddr);
 struct child_process* find_child_process (int pid);
 void remove_child_process (struct child_process *child);
-
 void remove_all_child_processes (void);
 struct file* get_file(int filedes);
 void process_close_file (int file_descriptor);

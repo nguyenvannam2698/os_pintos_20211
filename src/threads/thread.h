@@ -4,8 +4,6 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
-#include "synch.h"
-#include "fixed_point.h"
 #include "userprog/syscall.h"
 
 /* States in a thread's life cycle. */
@@ -96,9 +94,6 @@ struct thread
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
-   int64_t sleep_ticks;
-
-
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
@@ -107,14 +102,7 @@ struct thread
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
 
-   // for prioriry
-    int base_priority;                  /* Base priority. */
-    struct list locks;                  /* Locks that the thread is holding. */
-    struct lock *lock_waiting; 
-    int nice;                           /* Niceness. */
-    fixed_t recent_cpu;          /* The lock that the thread is waiting for. */
-
-    // for sys calls
+		// for sys calls
     struct list file_list;      // list of files
     int fd;                     // file descriptor
     
@@ -162,16 +150,6 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
-bool thread_cmp_priority (const struct list_elem *, const struct list_elem *, void *);
-void thread_hold_the_lock (struct lock *);
-void thread_remove_lock (struct lock *);
-void thread_donate_priority (struct thread *);
-void thread_update_priority (struct thread *);
-void thread_mlfqs_increase_recent_cpu_by_one (void);
-void thread_mlfqs_update_priority (struct thread *);
-void thread_mlfqs_update_load_avg_and_recent_cpu (void);
-
-// Thêm cho phần userprog
 int is_thread_alive (int pid);
 struct child_process* add_child_process (int pid);
 void thread_release_locks(void);

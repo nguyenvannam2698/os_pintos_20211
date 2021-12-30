@@ -12,6 +12,15 @@
         "syscall.h": "c",
         "vaddr.h": "c",
         "debug.h": "c",
-        "inttypes.h": "c"
+        "inttypes.h": "c",
+        "random.h": "c",
+        "io.h": "c",
+        "loader.h": "c",
+        "interrupt.h": "c",
+        "init.h": "c",
+        "stdint.h": "c",
+        "off_t.h": "c",
+        "switch.h": "c",
+        "stddef.h": "c"
     }
 }
